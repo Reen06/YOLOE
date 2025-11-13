@@ -7,7 +7,7 @@ This workspace contains a streamlined setup for running Ultralytics YOLOE models
 ## Environment Setup
 ```bash
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1     
 python -m pip install --upgrade pip
 pip install ultralytics opencv-python onnxruntime onnx
 ```
@@ -35,7 +35,7 @@ All scripts accept `--help` for runtime details.
 
 ### Prompt-Free Baseline
 ```bash
-.\.venv\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1        -      .\.venv\Scripts\activate.bat    (cmd prompt)
 python scripts\yoloe_run_webcam.py --model yoloe-11s-seg-pf.pt --conf 0.25
 ```
 

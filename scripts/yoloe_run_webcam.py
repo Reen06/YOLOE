@@ -73,11 +73,21 @@ def parse_args() -> argparse.Namespace:
 def load_model(model_path: Path, device: str):
     if not model_path.exists():
         model_path = Path(str(model_path))  # ensure str conversion for Ultralytics auto-download
-    try:
-        model = YOLOE(str(model_path))
-    except Exception:
-        model = YOLO(str(model_path))
-    model.to(device)
+    is_onnx = str(model_path).lower().endswith('.onnx')
+    
+    # For ONNX models, specify task explicitly to avoid warnings
+    if is_onnx:
+        try:
+            model = YOLOE(str(model_path), task='segment')
+        except Exception:
+            model = YOLO(str(model_path), task='segment')
+    else:
+        try:
+            model = YOLOE(str(model_path))
+        except Exception:
+            model = YOLO(str(model_path))
+        # Only call .to(device) for PyTorch models (.pt), not for exported formats like ONNX
+        model.to(device)
     return model
 
 
@@ -109,12 +119,55 @@ def main():
         predict_kwargs = {"imgsz": args.imgsz, "conf": args.conf}
         # Remove None values to avoid overriding defaults
         predict_kwargs = {k: v for k, v in predict_kwargs.items() if v is not None}
+        
+        # For ONNX models, pass device directly to predict() instead of using .to(device)
+        if str(args.model).lower().endswith('.onnx'):
+            # Convert device string to appropriate format for ONNX
+            # ONNX uses 'cpu', 'cuda:0', etc. directly
+            predict_kwargs["device"] = args.device
 
         results = model.predict(frame, verbose=False, **predict_kwargs)
-        annotated = results[0].plot(
-            boxes=not args.no_boxes,
-            masks=args.masks,
-        )
+        
+        # Handle plotting with error handling for custom class names
+        try:
+            annotated = results[0].plot(
+                boxes=not args.no_boxes,
+                masks=args.masks,
+            )
+        except (KeyError, AttributeError) as e:
+            # If class names don't match (e.g., custom prompts), try to fix it
+            result = results[0]
+            try:
+                if hasattr(result, 'names') and hasattr(result, 'boxes') and result.boxes is not None:
+                    # Get unique class IDs from detections
+                    if len(result.boxes.cls) > 0:
+                        unique_cls = result.boxes.cls.unique().int().tolist()
+                        # Create a fallback names dict with class IDs as names
+                        fallback_names = {}
+                        for cls_id in unique_cls:
+                            cls_id_int = int(cls_id)
+                            if cls_id_int not in result.names:
+                                # Use the class ID as the name if not found
+                                fallback_names[cls_id_int] = f"class_{cls_id_int}"
+                        # Update names dict
+                        if fallback_names:
+                            result.names.update(fallback_names)
+                        # Try plotting again
+                        annotated = result.plot(
+                            boxes=not args.no_boxes,
+                            masks=args.masks,
+                        )
+                    else:
+                        # No detections, just use the frame
+                        annotated = frame.copy()
+                else:
+                    # Fallback: just use the frame without annotations
+                    annotated = frame.copy()
+                    print(f"WARNING: Could not plot results due to class name mismatch: {e}")
+            except Exception as e2:
+                # If recovery attempt fails, just use the frame
+                annotated = frame.copy()
+                print(f"WARNING: Could not plot results: {e2}")
 
         frame_counter += 1
         current_time = time.perf_counter()
