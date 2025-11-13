@@ -1,0 +1,14 @@
+{
+  "image": "data\\Chair.jpg",
+  "annotations": [
+    {
+      "label": "object0",
+      "bbox": [
+        170,
+        4,
+        698,
+        848
+      ]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "image": "data\\realchair.jpg",
+  "annotations": [
+    {
+      "label": "object0",
+      "bbox": [
+        493,
+        427,
+        865,
+        728
+      ]
+    }
+  ]
+}
