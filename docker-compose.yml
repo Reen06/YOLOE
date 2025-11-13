@@ -1,0 +1,27 @@
+services:
+  yoloe:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: yoloe-container
+    volumes:
+      # Mount project directory for development
+      - .:/app
+      # Mount models directory to persist exported models
+      - ./models:/app/models
+      # Mount data directory for reference images
+      - ./data:/app/data
+    # For webcam access (Linux only - uncomment if needed)
+    # devices:
+    #   - /dev/video0:/dev/video0
+    # For webcam access on Windows/Mac, use host network mode
+    # network_mode: host
+    stdin_open: true
+    tty: true
+    working_dir: /app
+    # Override command to keep container running
+    command: /bin/bash
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+
